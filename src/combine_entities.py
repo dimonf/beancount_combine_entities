@@ -36,6 +36,8 @@ import re
 
 from beancount.core import data
 from beancount.parser import options
+from beancount.core.amount import Amount
+from beancount.core.number import ZERO
 
 _DEBUG = False
 
@@ -45,10 +47,12 @@ filter_flag     = "x"
 invert_amount   = True
 super_meta      = "_meta"
 
+
 def combine_entities(entries, options_map, config_str):
     config = eval(config_str, {}, {})
     if not isinstance(config, dict):
         raise RuntimeError("Invalid plugin configuration: args must be a single dictionary")
+    print(config)
 
     config['filter_flag'] = config['filter_flag'] or filter_flag
     config['super_meta'] = config['super_meta'] or super_meta
@@ -73,13 +77,17 @@ def replace_entry(entry, config):
     new_postings = []
     for posting in entry.postings:
         if posting.account != config['filter_account'] or \
-            posting.flag != config['filter_flag'] or \
             not test_amount(posting.units, config):
                 continue
 
         meta_new = posting.meta.copy()
         #super_meta = "account; sub: Sales expenses; com: Reimburseable; ..."
-        super_meta = meta_new.pop(config['super_meta']).split(';')
+        try:
+            super_meta = meta_new.pop(config['super_meta']).split(';')
+        except KeyError:
+            print(meta_new)
+            raise KeyError("""please write proper _meta for posting:
+            {}:{}""".format(meta_new['filename'],meta_new['lineno']))
 
         new_posting = posting._replace(account = config['our_account'],
                                        meta = meta_new,
@@ -93,7 +101,7 @@ def replace_entry(entry, config):
                             account = n_account,
                             number = None,
                             currency = '')
-        bal_posting.meta=n_meta
+        bal_posting._replace(meta=n_meta)
         new_postings.append(bal_posting)
     if new_postings:
         entry = entry._replace(postings = new_postings)
@@ -101,10 +109,10 @@ def replace_entry(entry, config):
 
 def test_amount(amount, config):
     if config['filter_amount'] == filter_positive  and \
-       amount > 0:
+       amount.number > ZERO:
         return True
     elif config['filter_amount'] == filter_negative and \
-       amount < 0:
+       amount.number < ZERO:
         return True
     else:
         return False
