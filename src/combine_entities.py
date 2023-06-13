@@ -72,8 +72,8 @@ def replace_entry(entry, config):
 
     new_postings = []
     for posting in entry.postings:
-        if posting.account != config['filter_account'] or
-            posting.flag != config['filter_flag'] or
+        if posting.account != config['filter_account'] or \
+            posting.flag != config['filter_flag'] or \
             not test_amount(posting.units, config):
                 continue
 
@@ -93,17 +93,17 @@ def replace_entry(entry, config):
                             account = n_account,
                             number = None,
                             currency = '')
-        bal_posting.meta n_meta
+        bal_posting.meta=n_meta
         new_postings.append(bal_posting)
     if new_postings:
         entry = entry._replace(postings = new_postings)
     return entry
 
 def test_amount(amount, config):
-    if config['filter_amount'] == filter_positive  and
+    if config['filter_amount'] == filter_positive  and \
        amount > 0:
         return True
-    elif config['filter_amount'] == filter_negative and
+    elif config['filter_amount'] == filter_negative and \
        amount < 0:
         return True
     else:

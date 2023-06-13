@@ -3,7 +3,7 @@ from setuptools import setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-#from my_pip_package import __version__
+from src.combine_entities import __version__
 
 requirements = ["beancount"]
 
@@ -17,7 +17,7 @@ setup(
     long_description_content_type = "text/markdown",
     url = "https://github.com/dimonf/beancount_combine_entities",
     install_requires = requirements,
-    python_required=">=3.6"
+    python_required=">=3.6",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
