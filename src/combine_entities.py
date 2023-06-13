@@ -31,7 +31,7 @@
 __version__ = "0.1"
 __copyright__ = "Copyright (C) Dmitri Kourbatsky"
 __license__ = "MIT License"
-__plugins__ = ('filter_by_tag',)
+__plugins__ = ('combine_entities',)
 
 import re
 
