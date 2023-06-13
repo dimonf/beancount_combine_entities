@@ -14,7 +14,6 @@
       Expenses:Agency 
          sub: "sales expenses"
          com: "advance and arrears"
-    Side effect of this plugin is implied filter of transactions by filter_tag
 
 
    include "agent_records.bean"
@@ -57,8 +56,9 @@ def combine_entities(entries, options_map, config_str):
     new_entries = []
     errors = []
     for entry in entries:
-        if isinstance(entry, Transaction):
-            if not conf['select_tag'] in entry.tags:
+        if isinstance(entry, data.Transaction):
+            if not config['filter_tag'] in entry.tags:
+                new_entries.append(entry)
                 continue
             entry = replace_entry(entry, config)
         new_entries.append(entry)
