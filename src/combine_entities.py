@@ -47,8 +47,8 @@ invert_amount   = True
 super_meta      = "_meta"
 
 def combine_entities(entries, options_map, config_str):
-    conf = eval(config_str, {}, {})
-    if not isinstance(conf, dict):
+    config = eval(config_str, {}, {})
+    if not isinstance(config, dict):
         raise RuntimeError("Invalid plugin configuration: args must be a single dictionary")
 
     config['filter_flag'] = config['filter_flag'] or filter_flag
