@@ -52,7 +52,7 @@ def combine_entities(entries, options_map, config_str):
     config = eval(config_str, {}, {})
     if not isinstance(config, dict):
         raise RuntimeError("Invalid plugin configuration: args must be a single dictionary")
-    print(config)
+    #print(config) #DELME
 
     config['filter_flag'] = config['filter_flag'] or filter_flag
     config['super_meta'] = config['super_meta'] or super_meta
@@ -96,12 +96,15 @@ def replace_entry(entry, config):
         #balancing posting
         n_account = super_meta.pop(0).strip()
         n_meta = {v[0]:f'"{v[1]}"' for v in [s.split(':') for s in super_meta]}
-        bal_posting = data.create_simple_posting(
-                            entry = None,
-                            account = n_account,
-                            number = None,
-                            currency = '')
-        bal_posting._replace(meta=n_meta)
+        #Posting(account, units, cost, price, flag, meta)
+        bal_posting = data.Posting(
+            account = n_account,
+            units   = posting.units,
+            cost    = None,
+            price   = None,
+            flag    = None,
+            meta    = n_meta
+        )
         new_postings.append(bal_posting)
     if new_postings:
         entry = entry._replace(postings = new_postings)
