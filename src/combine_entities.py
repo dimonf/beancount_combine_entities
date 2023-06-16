@@ -23,7 +23,7 @@
                                'filter_amount'   = 'dt', \
                                'invert_amount'   = True, \
                                'our_account'     = 'Assets:Agent', \
-                               'super_meta'      = '_meta', \
+                               'super_meta'      = 's_meta', \
                                }"
 """
 
@@ -45,7 +45,7 @@ filter_positive = "dt"
 filter_negative = "ct"
 filter_flag     = "x"
 invert_amount   = True
-super_meta      = "_meta"
+super_meta      = "s_meta"
 
 
 def combine_entities(entries, options_map, config_str):
@@ -57,17 +57,32 @@ def combine_entities(entries, options_map, config_str):
     config['filter_flag'] = config['filter_flag'] or filter_flag
     config['super_meta'] = config['super_meta'] or super_meta
     config['invert_amount'] = config['invert_amount'] or invert_amount
-    new_entries = []
+    new_t_entries = [] #all Transactions
+    new_n_entries = [] #all non-Transactions
+    affected_accounts = {}
     errors = []
+
     for entry in entries:
         if isinstance(entry, data.Transaction):
-            if not config['filter_tag'] in entry.tags:
-                new_entries.append(entry)
+            if config['filter_tag'] in entry.tags:
+                entry = replace_entry(entry, config)
+                new_t_entries.append(entry)
+            else:
+                #all Transaction entries that do not match
+                for posting in entry.postings:
+                    affected_accounts[posting.account] = True
                 continue
-            entry = replace_entry(entry, config)
-        new_entries.append(entry)
+        else:
+            new_n_entries.append(entry)
+    #remove "balance" entries for accounts that were affected by dropped transactions
+    for entry in new_n_entries:
+        if isinstance(entry, data.Balance):
+            if not entry.account in affected_accounts:
+                new_t_entries.append(entry)
+        else:
+            new_t_entries.append(entry)
 
-    return new_entries, errors
+    return new_t_entries, errors
 
 def replace_entry(entry, config):
     """for every posting of interest modify account/position and create 
