@@ -18,7 +18,7 @@
 
    include "agent_records.bean"
    plugin "combine_entities" "{'filter_account' = 'Liabilities:Principal', \
-                               'filter_tag'      = "principal", \
+                               'our_tag'         = "oi-master",\
                                'filter_flag'     = "x", \
                                'filter_amount'   = 'dt', \
                                'invert_amount'   = True, \
@@ -27,7 +27,7 @@
                                }"
 """
 
-__version__ = "0.1"
+__version__ = "0.2"
 __copyright__ = "Copyright (C) Dmitri Kourbatsky"
 __license__ = "MIT License"
 __plugins__ = ('combine_entities',)
@@ -54,32 +54,31 @@ def combine_entities(entries, options_map, config_str):
         raise RuntimeError("Invalid plugin configuration: args must be a single dictionary")
     #print(config) #DELME
 
-    config['filter_flag'] = config['filter_flag'] or filter_flag
-    config['super_meta'] = config['super_meta'] or super_meta
-    config['invert_amount'] = config['invert_amount'] or invert_amount
+    config['filter_flag'] = config.get('filter_flag', filter_flag)
+    config['super_meta'] = config.get('super_meta', super_meta)
+    config['invert_amount'] = config.get('invert_amount', invert_amount)
     new_t_entries = [] #all Transactions
     new_n_entries = [] #all non-Transactions
-    affected_accounts = {}
+    our_files = {} #file path(s) for files, where use of our_tag was detected
     errors = []
 
     for entry in entries:
         if isinstance(entry, data.Transaction):
-            if config['filter_tag'] in entry.tags:
-                entry = replace_entry(entry, config)
+            if config['our_tag'] in entry.tags:
                 new_t_entries.append(entry)
+                our_files[entry.meta['filename']] = True
             else:
-                #all Transaction entries that do not match
-                for posting in entry.postings:
-                    affected_accounts[posting.account] = True
-                continue
+                #here go only "foreign" entries
+                entry, replaced = replace_entry(entry, config)
+                #print(replaced)
+                if replaced:
+                    new_t_entries.append(entry)
         else:
             new_n_entries.append(entry)
-    #remove "balance" entries for accounts that were affected by dropped transactions
+
+    #remove entries of all types other than Transaction from "foreign" files
     for entry in new_n_entries:
-        if isinstance(entry, data.Balance):
-            if not entry.account in affected_accounts:
-                new_t_entries.append(entry)
-        else:
+        if entry.meta['filename'] in our_files:
             new_t_entries.append(entry)
 
     return new_t_entries, errors
@@ -88,7 +87,6 @@ def replace_entry(entry, config):
     """for every posting of interest modify account/position and create 
        balancing entry
     """
-
     new_postings = []
     for posting in entry.postings:
         if posting.account != config['filter_account'] or \
@@ -100,9 +98,11 @@ def replace_entry(entry, config):
         try:
             super_meta = meta_new.pop(config['super_meta']).split(';')
         except KeyError:
-            print(meta_new)
-            raise KeyError("""please write proper _meta for posting:
-            {}:{}""".format(meta_new['filename'],meta_new['lineno']))
+            message = """please write proper _meta for posting:
+            {}:{}""".format(meta_new['filename'],meta_new['lineno'])
+            print(message)
+            #raise KeyError(message)
+            continue
 
         new_posting = posting._replace(account = config['our_account'],
                                        meta = meta_new,
@@ -123,7 +123,7 @@ def replace_entry(entry, config):
         new_postings.append(bal_posting)
     if new_postings:
         entry = entry._replace(postings = new_postings)
-    return entry
+    return entry, len(new_postings)
 
 def test_amount(amount, config):
     if config['filter_amount'] == filter_positive  and \
