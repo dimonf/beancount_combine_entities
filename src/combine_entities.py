@@ -59,7 +59,6 @@ __license__ = "MIT License"
 __plugins__ = ('combine_entities',)
 
 import re
-from fnmatch import fnmatch
 
 from beancount.core import data
 from beancount.parser import options
@@ -74,6 +73,28 @@ filter_flag     = "x"
 invert_amount   = True
 super_meta      = "s_meta"
 
+def find_first(what, where, rev=False):
+    """args:
+         what: what we are looking, str
+         where: list of str
+         rev: if True, return an item in where, which, as a pattern,
+              matches <what>
+
+         apply exact match search first, than try regex
+         Modified FindFirst class from beancount query_env.py library
+    """
+    for v in where:
+        if what == v:
+            return v
+    for v in where:
+        if rev:
+            if re.match(v, what):
+                return v
+        else:
+            if re.match(what, v):
+                return v
+    return None
+
 
 def combine_entities(entries, options_map, config_str):
     config = eval(config_str, {}, {})
@@ -87,6 +108,7 @@ def combine_entities(entries, options_map, config_str):
     new_n_entries = [] #all non-Transactions
     our_files = {} #file path(s) for files, where use of our_tag was detected
     errors = []
+    r_ourtag = re.compile(config['our_tag'])
 
     #parse config
     config['meta_map'] = config.get('meta_map', {})
@@ -100,7 +122,7 @@ def combine_entities(entries, options_map, config_str):
 
     for entry in entries:
         if isinstance(entry, data.Transaction):
-            if config['our_tag'] in entry.tags:
+            if find_first(r_ourtag, entry.tags):
                 new_t_entries.append(entry)
                 our_files[entry.meta['filename']] = True
             else:
@@ -140,29 +162,24 @@ def replace_entry(entry, config):
             print(message)
             continue
 
-        bal_p = None
-        try:
-            bal_p = config['meta_map'][sm_val]
-        except KeyError:
-            for k in config['meta_map'].keys():
-                if fnmatch(sm_val, k):
-                    bal_p = config['meta_map'][k]
-                    break
-            if not bal_p:
-                message = """please write proper config for meta {}:{} at
-                {}:{}""".format(config['super_meta'],
-                                sm_val,
-                                posting.meta['filename'],
-                                posting.meta['lineno'],
-                                )
-                print(message)
-                #raise KeyError(message)
-                continue
+        k = find_first(sm_val, config['meta_map'].keys(), rev=True)
+        if k:
+            bal_p = config['meta_map'][k]
+        else:
+            message = """please write proper config for meta {}:{} at
+            {}:{}""".format(config['super_meta'],
+                            sm_val,
+                            posting.meta['filename'],
+                            posting.meta['lineno'],
+                            )
+            print(message)
+            #raise KeyError(message)
+            continue
 
-            #replace * with value from "exporting" posting meta
-            for k,v in bal_p['meta'].items():
-                if v == '*':
-                    bal_p['meta'][k] = sm_val
+        #replace * with value from "exporting" posting meta
+        for k,v in bal_p['meta'].items():
+            if v == '*':
+                bal_p['meta'][k] = sm_val
 
         new_posting = posting._replace(account = config['our_account'],
                                        units = -posting.units)
