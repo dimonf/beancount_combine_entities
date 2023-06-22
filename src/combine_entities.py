@@ -177,9 +177,10 @@ def replace_entry(entry, config):
             continue
 
         #replace * with value from "exporting" posting meta
-        for k,v in bal_p['meta'].items():
+        bal_p_meta = bal_p['meta'].copy()
+        for k,v in bal_p_meta.items():
             if v == '*':
-                bal_p['meta'][k] = sm_val
+                bal_p_meta[k] = sm_val
 
         new_posting = posting._replace(account = config['our_account'],
                                        units = -posting.units)
@@ -191,7 +192,7 @@ def replace_entry(entry, config):
             cost    = None,
             price   = None,
             flag    = None,
-            meta    = bal_p['meta']
+            meta    = bal_p_meta
         )
         new_postings.append(bal_posting)
     if new_postings:
