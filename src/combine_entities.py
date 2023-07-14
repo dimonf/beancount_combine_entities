@@ -181,6 +181,12 @@ def replace_entry(entry, config):
         for k,v in bal_p_meta.items():
             if v == '*':
                 bal_p_meta[k] = sm_val
+        # inherit all "system" meta values from source posting
+        meta_t = posting.meta.copy()
+        meta_t.update(bal_p_meta)
+        bal_p_meta = meta_t
+        #
+        bal_p['account'] = bal_p['account'].replace('*',sm_val.capitalize())
 
         new_posting = posting._replace(account = config['our_account'],
                                        units = -posting.units)
