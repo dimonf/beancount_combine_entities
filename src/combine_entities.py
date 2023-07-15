@@ -135,8 +135,10 @@ def combine_entities(entries, options_map, config_str):
 
     #drop entries of all types other than Transaction from "foreign" files
     for entry in new_n_entries:
-        if entry.meta['filename'] in our_files:
+        if (entry.meta['filename'] in our_files) or \
+            isinstance(entry, data.Price):
             new_t_entries.append(entry)
+
 
     return new_t_entries, errors
 
@@ -181,6 +183,12 @@ def replace_entry(entry, config):
         for k,v in bal_p_meta.items():
             if v == '*':
                 bal_p_meta[k] = sm_val
+        # inherit all "system" meta values from source posting
+        meta_t = posting.meta.copy()
+        meta_t.update(bal_p_meta)
+        bal_p_meta = meta_t
+        #
+        bal_p['account'] = bal_p['account'].replace('*',sm_val.capitalize())
 
         new_posting = posting._replace(account = config['our_account'],
                                        units = -posting.units)
